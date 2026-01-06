@@ -180,6 +180,6 @@ The system `git-subtree` uses `/bin/sh` (dash), which has a 1000 function recurs
 ### Push Performance
 
 The `--rejoin` flag caches split state via merge commits:
-- **First push**: Slow (creates rejoin marker)
-- **Subsequent pushes**: Fast (~0.5s)
-- **No changes**: Skipped entirely (tree-hash comparison)
+- **First push to a subtree**: Slow - must traverse entire history to create rejoin marker. For a workspace with ~1000 commits, expect 30-60+ seconds per subtree. The script warns you when no rejoin marker exists.
+- **Subsequent pushes**: Fast (~0.5s) - rejoin marker lets git skip already-processed history
+- **No changes**: Skipped entirely (tree-hash comparison, ~1s per subtree)
