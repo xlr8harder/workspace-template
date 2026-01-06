@@ -1,72 +1,102 @@
 # Workspace Template
 
-Meta-repo template for managing multiple related projects via git subtrees with unified dependency management.
+A template for creating git subtree meta-repos with unified dependency management.
 
-## Quick Start
+## Getting Started
 
-1. **Clone or use as template**:
-   ```bash
-   git clone <this-repo> my-workspace
-   cd my-workspace
-   ```
+### 1. Create Your Workspace
 
-2. **Run setup**:
-   ```bash
-   ./scripts/setup.sh
-   ```
-   This installs dependencies, configures git hooks, and sets up the git-subtree bash wrapper (fixes recursion limit on Debian/Ubuntu).
+**Option A: Use as GitHub template**
+- Click "Use this template" on GitHub
+- Clone your new repo
 
-3. **Restart your shell** (or `source ~/.bashrc`) to pick up `GIT_EXEC_PATH`.
-
-4. **Add your first subtree**:
-   ```bash
-   ./scripts/add_subtree.sh my-lib git@github.com:user/my-lib.git main
-   uv sync
-   ```
-
-## Adding Subtrees
-
+**Option B: Fork and clone**
 ```bash
-./scripts/add_subtree.sh <path> <git-url> [branch] [--no-install]
+# Fork on GitHub, then:
+git clone git@github.com:YOUR-USER/my-workspace.git
+cd my-workspace
 ```
 
-The script automatically:
-1. Adds the git subtree
-2. Auto-detects if it's an installable Python package
-3. Updates `subtrees.yaml` manifest
-4. Syncs `pyproject.toml` with editable installs (if installable)
-5. Syncs pre-commit config (if subtree has `.pre-commit-config.yaml`)
-6. Commits everything
+**Option C: Clone directly**
+```bash
+git clone git@github.com:xlr8harder/workspace-template.git my-workspace
+cd my-workspace
+rm -rf .git && git init
+git add -A && git commit -m "Initial workspace from template"
+```
+
+### 2. Run Setup
+
+```bash
+./scripts/setup.sh
+```
+
+This:
+- Installs Python dependencies via `uv`
+- Configures git hooks
+- Sets up the git-subtree bash wrapper (fixes recursion limit on Debian/Ubuntu)
+
+### 3. Restart Your Shell
+
+```bash
+source ~/.bashrc  # or restart your terminal
+```
+
+This picks up `GIT_EXEC_PATH` needed for the git-subtree fix.
+
+### 4. Add Your Subtrees
+
+```bash
+# Add a Python library (auto-detected as installable)
+./scripts/add_subtree.sh my-lib git@github.com:user/my-lib.git main
+
+# Add a non-Python project
+./scripts/add_subtree.sh my-docs git@github.com:user/my-docs.git main --no-install
+
+# Sync dependencies
+uv sync
+```
+
+### 5. Set Up Remote
+
+```bash
+git remote add origin git@github.com:YOUR-USER/my-workspace.git
+git push -u origin main
+```
+
+## What You Get
+
+After setup, your workspace can:
+
+- **Pull all subtrees** with one command, skipping those already up-to-date
+- **Push changes** back to subtree upstreams efficiently
+- **Run tests** across all subtrees
+- **Merge pre-commit configs** from subtrees into one workspace config
+- **Manage Python dependencies** with editable installs that override transitive deps
 
 ## Daily Workflow
 
-### Pulling Updates
 ```bash
+# Pull updates (meta-repo first, then subtrees)
 ./scripts/pull_all.sh
-```
-Pulls meta-repo first, then checks each subtree and only pulls those with upstream changes.
 
-### Pushing Changes
-```bash
+# Make changes in subtrees, commit normally
+git add -A && git commit -m "Fix bug in my-lib"
+
+# Push to all upstreams
 ./scripts/push_all.sh
-```
-Checks each subtree and only pushes those with local changes, then pushes meta-repo.
 
-### Sync Between Hosts
-```bash
-./scripts/pull_all.sh && ./scripts/push_all.sh
-```
-Both are fast (~10-15s) - they skip subtrees already in sync.
-
-### Run All Tests
-```bash
+# Run all tests
 ./scripts/test_all.sh
 ```
 
-### Check Status
+### Switching Between Hosts
+
 ```bash
-./scripts/status.sh
+./scripts/pull_all.sh && ./scripts/push_all.sh
 ```
+
+Both are fast (~10-15s) - they skip subtrees already in sync.
 
 ## Scripts Reference
 
@@ -76,43 +106,49 @@ Both are fast (~10-15s) - they skip subtrees already in sync.
 | `add_subtree.sh` | Add new subtree with auto-detection |
 | `pull_all.sh` | Smart pull: meta-repo first, skip up-to-date subtrees |
 | `push_all.sh` | Smart push: skip up-to-date subtrees, uses split-rejoin |
-| `status.sh` | Show subtree status |
+| `status.sh` | Show subtree status vs upstreams |
 | `test_all.sh` | Run tests across all subtrees |
-| `sync_pyproject.py` | Sync pyproject.toml from manifest |
+| `sync_pyproject.py` | Sync pyproject.toml from subtrees.yaml |
 | `sync_precommit.py` | Merge subtree pre-commit configs |
 
 ## How It Works
 
-### Dependency Management
+### Subtree Manifest
 
-- Installable subtrees are listed in workspace `pyproject.toml` as editable installs
-- `tool.uv.sources` maps package names to local paths
-- `tool.uv.override-dependencies` forces local packages over transitive git dependencies
+`subtrees.yaml` tracks your subtrees:
 
-### Pre-commit Hooks
-
-Each subtree can have its own `.pre-commit-config.yaml`. The workspace merges them:
-- Remote hooks get scoped with `files: ^subtree/`
-- Local hooks get prefixed IDs and adjusted paths
-
-After modifying subtree pre-commit configs:
-```bash
-uv run python scripts/sync_precommit.py
+```yaml
+subtrees:
+- path: my-lib
+  remote: git@github.com:user/my-lib.git
+  branch: main
+  install: true  # Add as editable Python dependency
 ```
 
-### Git Hooks
+### Dependency Management
 
-The workspace uses custom hooks in `.githooks/`:
-- **pre-commit**: Shows reminder, detects modified subtrees, runs pre-commit checks
-- **pre-push**: Warns about subtree changes needing separate push
+- Installable subtrees become editable installs in `pyproject.toml`
+- `tool.uv.override-dependencies` forces local packages over transitive git deps
+- Run `uv run python scripts/sync_pyproject.py` after editing `subtrees.yaml`
+
+### Pre-commit Merging
+
+Each subtree can have its own `.pre-commit-config.yaml`. The workspace merges them:
+- Hooks get scoped to their subtree (`files: ^my-lib/`)
+- Run `uv run python scripts/sync_precommit.py` after changes
 
 ## Platform Notes
 
 ### Git Subtree Recursion Limit (Debian/Ubuntu)
 
-The system `git-subtree` uses `/bin/sh` (dash), which has a 1000 recursion limit. `setup.sh` creates a bash wrapper at `~/.local/git-core/git-subtree` and sets `GIT_EXEC_PATH`.
+The system `git-subtree` uses dash which has a 1000 recursion limit. `setup.sh` creates a bash wrapper that fixes this. Make sure to restart your shell after setup.
 
-### Subtree Push Performance
+### Push Performance
 
-- First push after changes creates a rejoin marker, subsequent pushes are fast
-- Subtrees with no changes are skipped entirely (tree-hash comparison)
+First push to a subtree is slow (creates a rejoin marker). Subsequent pushes are fast (~0.5s). Subtrees with no changes are skipped entirely.
+
+## Customizing
+
+- Edit `CLAUDE.md` to add project-specific guidance for AI agents
+- Update workspace name in `pyproject.toml`
+- Add subtree-specific info to the commented section in `CLAUDE.md`
