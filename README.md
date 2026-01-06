@@ -1,6 +1,51 @@
 # Workspace Template
 
-A template for creating git subtree meta-repos with unified dependency management.
+A template for creating git subtree meta-repos that manage multiple related projects with unified dependency management.
+
+## Why This Exists
+
+Managing multiple related repositories is painful:
+- **Submodules** require constant `git submodule update`, break on branch switches, and make PRs awkward
+- **Monorepos** lose individual project history and make it hard to use projects standalone
+- **Separate repos** mean dependency hell and no atomic cross-project changes
+
+**Git subtrees** offer a middle ground: projects live in subdirectories with full history, can be pushed/pulled to their own upstreams, and the workspace commits atomically. But subtrees have friction - manual commands, no dependency coordination, slow operations at scale.
+
+This template eliminates that friction.
+
+## Features
+
+### Smart Pull/Push
+Both `pull_all.sh` and `push_all.sh` check each subtree against its upstream and skip those already in sync. What could be minutes of git operations becomes ~10 seconds.
+
+### Unified Python Dependencies
+Subtrees that are Python packages get installed as editables. If `pkg-a` depends on `pkg-b @ git+...`, the workspace forces it to use your local `pkg-b/` instead. Edit code, import it, no reinstall needed.
+
+### Merged Pre-commit Hooks
+Each subtree can have its own `.pre-commit-config.yaml`. The workspace merges them, scoping each subtree's hooks to its directory. One `pre-commit run` checks everything.
+
+### Cross-Subtree Testing
+`test_all.sh` runs each subtree's tests in isolation (avoiding conftest.py conflicts) and reports a unified pass/fail.
+
+### Auto-Detection
+Adding a subtree auto-detects if it's an installable Python package and configures dependencies accordingly.
+
+### Platform Fixes
+The setup script works around the git-subtree recursion limit on Debian/Ubuntu (dash shell's 1000-call limit breaks with large histories).
+
+## Design Decisions
+
+**Subtrees over submodules**: Subtrees embed code directly - no broken references, simpler mental model, atomic commits across projects.
+
+**Manifest-driven**: `subtrees.yaml` is the source of truth. Scripts read from it rather than inferring state from git.
+
+**Fast by default**: Operations skip unchanged subtrees. First push is slow (creates rejoin marker), subsequent pushes are fast.
+
+**Meta-repo first on pull**: When syncing, pull the workspace first, then subtrees. This matches the typical "switch hosts" workflow.
+
+**Editable installs with overrides**: Python packages install as editables with `tool.uv.override-dependencies` forcing local paths over transitive git deps.
+
+**Isolated test runs**: Rather than fighting pytest's conftest.py conflicts, each subtree's tests run separately.
 
 ## Getting Started
 
@@ -42,7 +87,7 @@ This:
 source ~/.bashrc  # or restart your terminal
 ```
 
-This picks up `GIT_EXEC_PATH` needed for the git-subtree fix.
+Required to pick up `GIT_EXEC_PATH` for the git-subtree fix.
 
 ### 4. Add Your Subtrees
 
@@ -63,16 +108,6 @@ uv sync
 git remote add origin git@github.com:YOUR-USER/my-workspace.git
 git push -u origin main
 ```
-
-## What You Get
-
-After setup, your workspace can:
-
-- **Pull all subtrees** with one command, skipping those already up-to-date
-- **Push changes** back to subtree upstreams efficiently
-- **Run tests** across all subtrees
-- **Merge pre-commit configs** from subtrees into one workspace config
-- **Manage Python dependencies** with editable installs that override transitive deps
 
 ## Daily Workflow
 
@@ -96,7 +131,7 @@ git add -A && git commit -m "Fix bug in my-lib"
 ./scripts/pull_all.sh && ./scripts/push_all.sh
 ```
 
-Both are fast (~10-15s) - they skip subtrees already in sync.
+Both are fast - they skip subtrees already in sync.
 
 ## Scripts Reference
 
@@ -111,11 +146,11 @@ Both are fast (~10-15s) - they skip subtrees already in sync.
 | `sync_pyproject.py` | Sync pyproject.toml from subtrees.yaml |
 | `sync_precommit.py` | Merge subtree pre-commit configs |
 
-## How It Works
+## Configuration Files
 
-### Subtree Manifest
+### subtrees.yaml
 
-`subtrees.yaml` tracks your subtrees:
+The manifest tracking your subtrees:
 
 ```yaml
 subtrees:
@@ -125,30 +160,26 @@ subtrees:
   install: true  # Add as editable Python dependency
 ```
 
-### Dependency Management
+### pyproject.toml
 
-- Installable subtrees become editable installs in `pyproject.toml`
-- `tool.uv.override-dependencies` forces local packages over transitive git deps
-- Run `uv run python scripts/sync_pyproject.py` after editing `subtrees.yaml`
+Workspace-level Python config. The sync script manages:
+- `project.dependencies` - installable subtrees
+- `tool.uv.sources` - paths to local packages
+- `tool.uv.override-dependencies` - force local over transitive
 
-### Pre-commit Merging
+### CLAUDE.md
 
-Each subtree can have its own `.pre-commit-config.yaml`. The workspace merges them:
-- Hooks get scoped to their subtree (`files: ^my-lib/`)
-- Run `uv run python scripts/sync_precommit.py` after changes
+Guidance for AI agents working in the workspace. Customize the commented section at the bottom for project-specific instructions.
 
 ## Platform Notes
 
 ### Git Subtree Recursion Limit (Debian/Ubuntu)
 
-The system `git-subtree` uses dash which has a 1000 recursion limit. `setup.sh` creates a bash wrapper that fixes this. Make sure to restart your shell after setup.
+The system `git-subtree` uses `/bin/sh` (dash), which has a 1000 function recursion limit. With enough commits, `git subtree split` fails. `setup.sh` creates a bash wrapper at `~/.local/git-core/git-subtree` and sets `GIT_EXEC_PATH`.
 
 ### Push Performance
 
-First push to a subtree is slow (creates a rejoin marker). Subsequent pushes are fast (~0.5s). Subtrees with no changes are skipped entirely.
-
-## Customizing
-
-- Edit `CLAUDE.md` to add project-specific guidance for AI agents
-- Update workspace name in `pyproject.toml`
-- Add subtree-specific info to the commented section in `CLAUDE.md`
+The `--rejoin` flag caches split state via merge commits:
+- **First push**: Slow (creates rejoin marker)
+- **Subsequent pushes**: Fast (~0.5s)
+- **No changes**: Skipped entirely (tree-hash comparison)
