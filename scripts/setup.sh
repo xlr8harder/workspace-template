@@ -27,7 +27,8 @@ if [[ -f /usr/lib/git-core/git-subtree ]]; then
         ln -sf "$f" ~/.local/git-core/ 2>/dev/null || true
     done
 
-    # Create bash wrapper for git-subtree (overwrites the symlink)
+    # Create bash wrapper for git-subtree (remove symlink first, then create file)
+    rm -f ~/.local/git-core/git-subtree
     cat > ~/.local/git-core/git-subtree <<'WRAPPER'
 #!/usr/bin/env bash
 # Wrapper to run git-subtree under bash instead of dash
