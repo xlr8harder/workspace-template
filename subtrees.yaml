@@ -1,0 +1,16 @@
+# Subtree manifest - add your subtrees here
+#
+# Each entry has:
+#   path: local directory name
+#   remote: git URL
+#   branch: branch to track
+#   install: true if it's an installable Python package
+#
+# Example:
+# subtrees:
+# - path: my-lib
+#   remote: git@github.com:user/my-lib.git
+#   branch: main
+#   install: true
+
+subtrees: []

@@ -1,0 +1,42 @@
+#!/bin/bash
+# Workspace pre-commit hook - runs pre-commit tool via uv
+set -e
+
+# Detect which subtrees are being modified in this commit
+STAGED_FILES=$(git diff --cached --name-only)
+AFFECTED_SUBTREES=""
+
+if [ -f subtrees.yaml ] && command -v python3 >/dev/null 2>&1; then
+    SUBTREES=$(python3 -c "import yaml; print(' '.join(s['path'] for s in yaml.safe_load(open('subtrees.yaml')).get('subtrees', [])))" 2>/dev/null || true)
+    for subtree in $SUBTREES; do
+        if echo "$STAGED_FILES" | grep -q "^${subtree}/"; then
+            AFFECTED_SUBTREES="$AFFECTED_SUBTREES $subtree"
+        fi
+    done
+fi
+
+# Show context-aware reminder
+echo ""
+echo "╔══════════════════════════════════════════════════════════════════╗"
+echo "║  WORKSPACE META-REPO                                            ║"
+echo "║  See workspace root CLAUDE.md for workflows.                    ║"
+echo "╚══════════════════════════════════════════════════════════════════╝"
+
+if [ -n "$AFFECTED_SUBTREES" ]; then
+    echo ""
+    echo "Subtrees modified in this commit:"
+    for subtree in $AFFECTED_SUBTREES; do
+        echo "  - $subtree"
+    done
+    echo ""
+    echo "To push after committing:"
+    echo "  ./scripts/push_all.sh              # push all subtrees"
+    for subtree in $AFFECTED_SUBTREES; do
+        echo "  git subtree push --prefix=$subtree origin main  # just $subtree"
+    done
+fi
+echo ""
+
+if [ -f .pre-commit-config.yaml ]; then
+    exec uv run pre-commit run --config .pre-commit-config.yaml "$@"
+fi

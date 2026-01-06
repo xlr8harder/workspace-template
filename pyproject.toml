@@ -1,0 +1,25 @@
+[project]
+name = "workspace"
+version = "0.1.0"
+description = "Meta-repo workspace for related projects"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.uv.sources]
+# Editable installs added by sync_pyproject.py
+
+[tool.uv]
+# Override transitive dependencies to use local editables
+override-dependencies = []
+
+[tool.uv.workspace]
+members = []
+exclude = ["scripts"]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.0.0",
+    "pytest>=8.0.0",
+    "tomlkit>=0.13.0",
+    "pyyaml>=6.0",
+]

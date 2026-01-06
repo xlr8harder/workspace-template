@@ -1,0 +1,65 @@
+#!/bin/bash
+# Workspace pre-push hook - remind about subtree workflow
+set -e
+
+# Skip hook if running from push_all.sh (it handles its own messaging)
+if [ "${WORKSPACE_PUSH_ALL:-}" = "1" ]; then
+    exit 0
+fi
+
+# Pre-push hook receives: $1=remote name, $2=remote URL
+REMOTE_NAME="$1"
+REMOTE_URL="$2"
+
+# Check if this is a subtree push (URL matches a subtree remote)
+IS_SUBTREE_PUSH=""
+SUBTREE_NAME=""
+if [ -f subtrees.yaml ] && command -v python3 >/dev/null 2>&1; then
+    SUBTREE_NAME=$(python3 -c "
+import yaml
+with open('subtrees.yaml') as f:
+    data = yaml.safe_load(f)
+for s in data.get('subtrees', []):
+    if s.get('remote', '') == '$REMOTE_URL':
+        print(s['path'])
+        break
+" 2>/dev/null || true)
+    [ -n "$SUBTREE_NAME" ] && IS_SUBTREE_PUSH="true"
+fi
+
+if [ -n "$IS_SUBTREE_PUSH" ]; then
+    # Pushing to a subtree upstream - brief confirmation
+    echo ""
+    echo "Pushing subtree '$SUBTREE_NAME' to upstream..."
+    echo ""
+    exit 0
+fi
+
+# Pushing to workspace remote - show subtree reminder
+echo ""
+echo "╔══════════════════════════════════════════════════════════════════╗"
+echo "║  WORKSPACE META-REPO: You're pushing to the workspace remote.   ║"
+echo "║                                                                  ║"
+echo "║  This does NOT push subtree changes to their upstream repos!    ║"
+echo "╚══════════════════════════════════════════════════════════════════╝"
+
+# List subtrees with push commands
+if [ -f subtrees.yaml ] && command -v python3 >/dev/null 2>&1; then
+    SUBTREES=$(python3 -c "
+import yaml
+with open('subtrees.yaml') as f:
+    data = yaml.safe_load(f)
+for s in data.get('subtrees', []):
+    print(s['path'])
+" 2>/dev/null || true)
+
+    if [ -n "$SUBTREES" ]; then
+        echo ""
+        echo "To push subtree changes to their upstreams:"
+        echo "  ./scripts/push_all.sh              # push all subtrees"
+        for subtree in $SUBTREES; do
+            [ -d "$subtree" ] && echo "  git subtree push --prefix=$subtree origin main  # just $subtree"
+        done
+    fi
+fi
+echo ""
