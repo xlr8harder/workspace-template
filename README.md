@@ -35,6 +35,8 @@ The setup script works around the git-subtree recursion limit on Debian/Ubuntu (
 
 ## Design Decisions
 
+This template represents one opinionated approach to managing multiple repositories. It's the workflow that works for me, but it's by no means the only way - adapt or ignore whatever doesn't fit your needs.
+
 **Subtrees over submodules**: Subtrees embed code directly - no broken references, simpler mental model, atomic commits across projects.
 
 **Manifest-driven**: `subtrees.yaml` is the source of truth. Scripts read from it rather than inferring state from git.
@@ -135,6 +137,8 @@ Both are fast - they skip subtrees already in sync.
 
 ## Scripts Reference
 
+**User-facing scripts** - what you'll typically run:
+
 | Script | Purpose |
 |--------|---------|
 | `setup.sh` | Initialize workspace after clone |
@@ -143,8 +147,14 @@ Both are fast - they skip subtrees already in sync.
 | `push_all.sh` | Smart push: skip up-to-date subtrees, uses split-rejoin |
 | `status.sh` | Show subtree status vs upstreams |
 | `test_all.sh` | Run tests across all subtrees |
-| `sync_pyproject.py` | Sync pyproject.toml from subtrees.yaml |
-| `sync_precommit.py` | Merge subtree pre-commit configs |
+
+**Internal helpers** - called by other scripts, rarely needed directly:
+
+| Script | Purpose |
+|--------|---------|
+| `sync_pyproject.py` | Sync pyproject.toml from subtrees.yaml (called by `add_subtree.sh`) |
+| `sync_precommit.py` | Merge subtree pre-commit configs (called by `add_subtree.sh`) |
+| `common.sh` | Shared bash utilities used by all scripts |
 
 ## Configuration Files
 
