@@ -111,6 +111,27 @@ git remote add origin git@github.com:YOUR-USER/my-workspace.git
 git push -u origin main
 ```
 
+## Cloning an Existing Workspace
+
+If you've already set up a workspace and want to use it on a new machine:
+
+```bash
+# 1. Clone your workspace (subtrees are already embedded)
+git clone git@github.com:YOUR-USER/my-workspace.git
+cd my-workspace
+
+# 2. Run setup
+./scripts/setup.sh
+
+# 3. Restart your shell (required for git-subtree fix)
+source ~/.bashrc  # or restart your terminal
+
+# 4. Pull any updates from subtree upstreams
+./scripts/pull_all.sh
+```
+
+That's it - no need to re-add subtrees. They're part of the workspace history.
+
 ## Daily Workflow
 
 ```bash
