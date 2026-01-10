@@ -48,6 +48,28 @@ Checks each subtree and only pushes those with local changes, then pushes meta-r
 
 Shows status of all subtrees relative to their upstreams.
 
+## Requirements
+
+### direnv
+
+This workspace requires [direnv](https://direnv.net/) for seamless `uv` integration across subtrees.
+
+**Why?** Subtrees with their own `pyproject.toml` (for standalone use) would otherwise create separate `.venv` directories when you run `uv run` from their directories, instead of using the workspace packages.
+
+The workspace `.envrc` sets `UV_PROJECT` to the workspace root, so all `uv` commands use the workspace environment regardless of which subdirectory you're in.
+
+**Installation:**
+
+```bash
+# Quick install via setup.sh
+./scripts/setup.sh --install-direnv
+
+# Then restart your shell and run setup again
+./scripts/setup.sh
+```
+
+Or install manually — see [direnv installation docs](https://direnv.net/docs/installation.html).
+
 ## Testing
 
 Run tests across all subtrees:
