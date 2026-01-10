@@ -32,6 +32,9 @@ Use `--no-install` to override auto-detection.
 
 Pulls meta-repo first, then checks each subtree and only pulls those with upstream changes. Run `uv sync` afterward if dependencies changed.
 
+Meta-repo pulls use merge (no rebase) to preserve subtree rejoin history. Avoid
+rebasing the meta-repo, which can replay split commits at the repo root.
+
 ### Pushing Changes
 
 ```bash

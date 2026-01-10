@@ -44,6 +44,7 @@ This template represents one opinionated approach to managing multiple repositor
 **Fast by default**: Operations skip unchanged subtrees. First push is slow (creates rejoin marker), subsequent pushes are fast.
 
 **Meta-repo first on pull**: When syncing, pull the workspace first, then subtrees. This matches the typical "switch hosts" workflow.
+Meta-repo pulls use merge (no rebase) to preserve subtree rejoin history.
 
 **Editable installs with overrides**: Python packages install as editables with `tool.uv.override-dependencies` forcing local paths over transitive git deps.
 

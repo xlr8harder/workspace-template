@@ -20,6 +20,7 @@ Options:
   -h, --help        Show this help
 
 Note: Pulling subtrees may create merge commits in your meta-repo.
+      Meta-repo pulls use merge (no rebase) to preserve subtree rejoin history.
 EOF
     exit 0
 }
@@ -54,7 +55,7 @@ pull_meta() {
     info "=== Pulling meta-repo ==="
 
     if git rev-parse --abbrev-ref "@{upstream}" &>/dev/null; then
-        if git pull --rebase; then
+        if git pull --no-rebase; then
             success "Meta-repo pulled successfully"
         else
             error "Failed to pull meta-repo (you may need to resolve conflicts)"
